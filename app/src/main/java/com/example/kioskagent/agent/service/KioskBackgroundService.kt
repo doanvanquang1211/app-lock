@@ -1,5 +1,7 @@
 package com.example.kioskagent.agent.service
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
@@ -14,6 +16,7 @@ import android.os.IBinder
 import android.os.UserManager
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
 import com.example.kioskagent.agent.AdminReceiver
 
@@ -27,7 +30,7 @@ class KioskBackgroundService : Service() {
     private val handler = Handler()
     private val monitorRunnable = object : Runnable {
         override fun run() {
-//            checkWifi()
+            checkWifi()
             handler.postDelayed(this, 2000)
         }
     }
@@ -61,12 +64,32 @@ class KioskBackgroundService : Service() {
         openChrome()
 
         // Bắt đầu giám sát WiFi
-//        handler.post(monitorRunnable)
+        handler.post(monitorRunnable)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channelId = "kiosk_service_channel"
+            val channel = NotificationChannel(
+                channelId,
+                "Kiosk Background Service",
+                NotificationManager.IMPORTANCE_LOW
+            )
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
+
+            val notification = NotificationCompat.Builder(this, channelId)
+                .setContentTitle("Kiosk Mode")
+                .setContentText("Đang chạy chế độ kiosk...")
+                .setSmallIcon(android.R.drawable.ic_lock_lock)
+                .build()
+
+            startForeground(1, notification)
+        }
+
         return START_STICKY
     }
+
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -87,40 +110,40 @@ class KioskBackgroundService : Service() {
         }
     }
 
-//    @RequiresApi(Build.VERSION_CODES.Q)
-//    private fun connectAllowedWifi() {
-//        val specifier = WifiNetworkSpecifier.Builder()
-//            .setSsid(allowedSSID)
-//            .setWpa2Passphrase(allowedPassword)
-//            .build()
-//
-//        val request = NetworkRequest.Builder()
-//            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-//            .setNetworkSpecifier(specifier)
-//            .build()
-//
-//        val connectivityManager =
-//            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-//
-//        connectivityManager.requestNetwork(
-//            request,
-//            object : ConnectivityManager.NetworkCallback() {
-//                override fun onAvailable(network: Network) {
-//                    connectivityManager.bindProcessToNetwork(network)
-//                }
-//            })
-//    }
-//
-//    private fun checkWifi() {
-//        val wifiManager =
-//            applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-//        val info = wifiManager.connectionInfo
-//        val ssid = info.ssid?.replace("\"", "")
-//        if (ssid != allowedSSID) {
-//            Log.d("KioskService", "Sai WiFi: $ssid → reconnect...")
-//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//                connectAllowedWifi()
-//            }
-//        }
-//    }
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun connectAllowedWifi() {
+        val specifier = WifiNetworkSpecifier.Builder()
+            .setSsid(allowedSSID)
+            .setWpa2Passphrase(allowedPassword)
+            .build()
+
+        val request = NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .setNetworkSpecifier(specifier)
+            .build()
+
+        val connectivityManager =
+            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+        connectivityManager.requestNetwork(
+            request,
+            object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    connectivityManager.bindProcessToNetwork(network)
+                }
+            })
+    }
+
+    private fun checkWifi() {
+        val wifiManager =
+            applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val info = wifiManager.connectionInfo
+        val ssid = info.ssid?.replace("\"", "")
+        if (ssid != allowedSSID) {
+            Log.d("KioskService", "Sai WiFi: $ssid → reconnect...")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                connectAllowedWifi()
+            }
+        }
+    }
 }
