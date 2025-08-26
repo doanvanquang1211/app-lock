@@ -5,7 +5,12 @@ import android.app.Activity
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.MediaStore
 import android.util.Log
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -14,6 +19,11 @@ import com.example.kioskagent.agent.AdminReceiver
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.GestureDetector.SimpleOnGestureListener
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
+import androidx.annotation.RequiresApi
+import androidx.core.content.FileProvider
+import java.io.File
 import kotlin.math.abs
 
 class ChromeLauncherActivity : Activity() {
@@ -22,6 +32,7 @@ class ChromeLauncherActivity : Activity() {
     private lateinit var adminComponent: ComponentName
     private lateinit var webView: WebView
     private lateinit var gestureDetector: GestureDetector
+    private lateinit var wakeLock: PowerManager.WakeLock
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,6 +46,15 @@ class ChromeLauncherActivity : Activity() {
 
         if (dpm.isDeviceOwnerApp(packageName)) {
             dpm.setLockTaskPackages(adminComponent, arrayOf(packageName))
+            dpm.setKeyguardDisabled(adminComponent, true)
+            dpm.setMaximumTimeToLock(adminComponent, 0)
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            val wakeLock = pm.newWakeLock(
+                PowerManager.FULL_WAKE_LOCK or
+                        PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "KioskApp::WakeLock"
+            )
+            wakeLock.acquire()
         } else {
             Log.e("WebKiosk", "App is NOT device owner, kiosk won't fully work!")
         }
@@ -42,7 +62,35 @@ class ChromeLauncherActivity : Activity() {
         // Config WebView
         webView.settings.javaScriptEnabled = true
         webView.webViewClient = WebViewClient()
-        webView.loadUrl("https://www.youtube.com/")
+        webView.webChromeClient = object : WebChromeClient() {
+            private var filePathCallback: ValueCallback<Array<Uri>>? = null
+            private var imageUri: Uri? = null
+
+            override fun onShowFileChooser(
+                webView: WebView?,
+                filePathCallback: ValueCallback<Array<Uri>>,
+                fileChooserParams: FileChooserParams
+            ): Boolean {
+                this.filePathCallback = filePathCallback
+
+                // Tạo file ảnh tạm trong cache (không lưu thư viện)
+                val photoFile = File.createTempFile("capture_", ".jpg", cacheDir)
+                imageUri = FileProvider.getUriForFile(
+                    this@ChromeLauncherActivity,
+                    "${packageName}.fileprovider",
+                    photoFile
+                )
+
+                val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE).apply {
+                    putExtra(MediaStore.EXTRA_OUTPUT, imageUri)
+                    addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+                }
+
+                startActivityForResult(intent, 1001)
+                return true
+            }
+        }
+        webView.loadUrl("https://www.google.com/")
 
         // Khởi tạo gesture
         gestureDetector = GestureDetector(this, object : SimpleOnGestureListener() {
@@ -106,9 +154,41 @@ class ChromeLauncherActivity : Activity() {
 
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode == 1001) {
+            val webChromeClient = webView.webChromeClient as? WebChromeClient
+            if (webChromeClient != null) {
+                val field = webChromeClient.javaClass.getDeclaredField("filePathCallback")
+                field.isAccessible = true
+                val callback = field.get(webChromeClient) as? ValueCallback<Array<Uri>>
+                val imageUriField = webChromeClient.javaClass.getDeclaredField("imageUri")
+                imageUriField.isAccessible = true
+                val imageUri = imageUriField.get(webChromeClient) as? Uri
+
+                if (resultCode == Activity.RESULT_OK && imageUri != null) {
+                    callback?.onReceiveValue(arrayOf(imageUri))
+                } else {
+                    callback?.onReceiveValue(null)
+                }
+            }
+        }
+    }
+
+
     override fun onResume() {
         super.onResume()
         enterKioskMode()
+    }
+
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
     }
 
     private fun enterKioskMode() {
@@ -123,6 +203,8 @@ class ChromeLauncherActivity : Activity() {
             Log.e("WebKiosk", "startLockTask failed: ${e.message}")
         }
     }
+
+
 
     override fun onBackPressed() {
         if (webView.canGoBack()) {

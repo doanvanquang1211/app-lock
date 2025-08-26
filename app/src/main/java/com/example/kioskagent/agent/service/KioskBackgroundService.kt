@@ -13,6 +13,7 @@ import android.net.wifi.WifiNetworkSpecifier
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
+import android.os.PowerManager
 import android.os.UserManager
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -26,6 +27,7 @@ class KioskBackgroundService : Service() {
     private lateinit var adminComponent: ComponentName
     private val allowedSSID = "TC"
     private val allowedPassword = "Tcom123$567*"
+    private lateinit var wakeLock: PowerManager.WakeLock
 
     private val handler = Handler()
     private val monitorRunnable = object : Runnable {
@@ -49,10 +51,12 @@ class KioskBackgroundService : Service() {
             dpm.addUserRestriction(adminComponent, UserManager.DISALLOW_UNINSTALL_APPS)
             dpm.clearUserRestriction(adminComponent, UserManager.DISALLOW_CONFIG_WIFI)
             dpm.clearUserRestriction(adminComponent, UserManager.DISALLOW_CONFIG_BLUETOOTH)
-
-
             // Chỉ cho phép Chrome chạy trong LockTask
             dpm.setLockTaskPackages(adminComponent, arrayOf("com.android.chrome"))
+
+            dpm.setKeyguardDisabled(adminComponent, true)
+            dpm.setMaximumTimeToLock(adminComponent, 0)
+
         }
 
         // Kết nối WiFi
@@ -61,7 +65,7 @@ class KioskBackgroundService : Service() {
         }
 
         // Mở Chrome ở kiosk mode
-        openChrome()
+//        openChrome()
 
         // Bắt đầu giám sát WiFi
         handler.post(monitorRunnable)
@@ -90,7 +94,12 @@ class KioskBackgroundService : Service() {
         return START_STICKY
     }
 
-
+    override fun onDestroy() {
+        super.onDestroy()
+        if (wakeLock.isHeld) {
+            wakeLock.release()
+        }
+    }
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun openChrome() {
@@ -102,6 +111,13 @@ class KioskBackgroundService : Service() {
 
         try {
             startActivity(intent)
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            val wakeLock = pm.newWakeLock(
+                PowerManager.FULL_WAKE_LOCK or
+                        PowerManager.ACQUIRE_CAUSES_WAKEUP,
+                "KioskApp::WakeLock"
+            )
+            wakeLock.acquire()
         } catch (e: Exception) {
             // fallback nếu không có Chrome
             startActivity(
