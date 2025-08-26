@@ -1,0 +1,22 @@
+<resources>
+    <!-- Theme chính của app -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/purple_500</item>
+        <item name="colorPrimaryDark">@color/purple_700</item>
+        <item name="colorAccent">@color/teal_200</item>
+    </style>
+
+    <!-- Theme trong suốt cho ChromeLauncherActivity -->
+    <style name="Theme.AppCompat.Translucent" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">true</item>
+    </style>
+
+    <!-- Theme dialog cho WifiAlertActivity -->
+    <style name="AppTheme.WifiAlert" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="colorAccent">#FF0000</item>
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>

@@ -1,0 +1,56 @@
+# =========================
+# Android Studio / IntelliJ
+# =========================
+*.iml
+.idea/
+.gradle
+local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+
+# =========================
+# Gradle
+# =========================
+.gradle/
+build/
+*/build/
+!gradle-wrapper.jar
+.gradle/2.14.1/taskArtifacts
+
+# =========================
+# Log / OS files
+# =========================
+*.log
+.DS_Store
+Thumbs.db
+
+# =========================
+# Keystore files (private!)
+# =========================
+*.jks
+*.keystore
+
+# =========================
+# Android
+# =========================
+captures/
+output.json
+*.apk
+*.ap_
+*.aab
+
+# =========================
+# NDK / CMake
+# =========================
+.cxx/
+obj/
+
+# =========================
+# VS Code
+# =========================
+.vscode/
+node_modules/
