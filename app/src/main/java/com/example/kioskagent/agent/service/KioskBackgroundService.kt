@@ -27,7 +27,6 @@ class KioskBackgroundService : Service() {
     private lateinit var adminComponent: ComponentName
     private val allowedSSID = "TC"
     private val allowedPassword = "Tcom123$567*"
-    private lateinit var wakeLock: PowerManager.WakeLock
 
     private val handler = Handler()
     private val monitorRunnable = object : Runnable {
@@ -96,9 +95,6 @@ class KioskBackgroundService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (wakeLock.isHeld) {
-            wakeLock.release()
-        }
     }
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -112,12 +108,6 @@ class KioskBackgroundService : Service() {
         try {
             startActivity(intent)
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-            val wakeLock = pm.newWakeLock(
-                PowerManager.FULL_WAKE_LOCK or
-                        PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                "KioskApp::WakeLock"
-            )
-            wakeLock.acquire()
         } catch (e: Exception) {
             // fallback nếu không có Chrome
             startActivity(

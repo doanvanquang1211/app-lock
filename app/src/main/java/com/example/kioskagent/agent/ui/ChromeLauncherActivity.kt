@@ -32,7 +32,6 @@ class ChromeLauncherActivity : Activity() {
     private lateinit var adminComponent: ComponentName
     private lateinit var webView: WebView
     private lateinit var gestureDetector: GestureDetector
-    private lateinit var wakeLock: PowerManager.WakeLock
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,12 +48,6 @@ class ChromeLauncherActivity : Activity() {
             dpm.setKeyguardDisabled(adminComponent, true)
             dpm.setMaximumTimeToLock(adminComponent, 0)
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-            val wakeLock = pm.newWakeLock(
-                PowerManager.FULL_WAKE_LOCK or
-                        PowerManager.ACQUIRE_CAUSES_WAKEUP,
-                "KioskApp::WakeLock"
-            )
-            wakeLock.acquire()
         } else {
             Log.e("WebKiosk", "App is NOT device owner, kiosk won't fully work!")
         }
@@ -90,7 +83,7 @@ class ChromeLauncherActivity : Activity() {
                 return true
             }
         }
-        webView.loadUrl("https://www.google.com/")
+        webView.loadUrl("https://www.facebook.com/")
 
         // Khởi tạo gesture
         gestureDetector = GestureDetector(this, object : SimpleOnGestureListener() {
@@ -186,9 +179,6 @@ class ChromeLauncherActivity : Activity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (wakeLock.isHeld) {
-            wakeLock.release()
-        }
     }
 
     private fun enterKioskMode() {
