@@ -1,20 +1,83 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:fillViewport="true"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="20dp">
+    android:layout_height="match_parent">
 
-    <Button
-        android:id="@+id/btnRemoveDeviceOwner"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Remove Device Owner" />
-    <Button
-        android:id="@+id/btnOpenSettings"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Open Settings (Admin)" />
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="16dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
 
-</LinearLayout>
+        <TextView android:text="Mật khẩu mở khóa"
+            android:layout_width="wrap_content" android:layout_height="wrap_content"/>
+
+        <EditText
+            android:id="@+id/etPwd"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPassword"
+            android:hint="Nhập mật khẩu"/>
+
+        <Button
+            android:id="@+id/btnSavePwd"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Lưu mật khẩu"/>
+
+        <View android:layout_width="match_parent" android:layout_height="8dp"/>
+
+        <TextView
+            android:id="@+id/tvUsageStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Usage Access: ?"/>
+
+        <Button
+            android:id="@+id/btnReqUsage"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cấp Usage Access"/>
+
+        <TextView
+            android:id="@+id/tvOverlayStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Overlay: ?"/>
+
+        <Button
+            android:id="@+id/btnReqOverlay"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cấp quyền Overlay"/>
+
+        <View android:layout_width="match_parent" android:layout_height="8dp"/>
+
+        <Button
+            android:id="@+id/btnStartService"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Bật bảo vệ"/>
+
+        <Button
+            android:id="@+id/btnStopService"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tắt bảo vệ"/>
+
+        <View android:layout_width="match_parent" android:layout_height="12dp"/>
+
+        <TextView
+            android:text="Chọn ứng dụng cần khóa"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
+        <ListView
+            android:id="@+id/listView"
+            android:layout_width="match_parent"
+            android:layout_height="400dp"
+            android:choiceMode="multipleChoice"/>
+
+    </LinearLayout>
+</ScrollView>

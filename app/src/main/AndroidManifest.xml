@@ -17,6 +17,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
 
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -41,23 +42,41 @@
             </intent-filter>
         </receiver>
 
+<!--        <activity-->
+<!--            android:name=".agent.ui.ChromeLauncherActivity"-->
+<!--            android:exported="true"-->
+<!--            android:launchMode="singleTask"-->
+<!--            android:excludeFromRecents="true">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
+<!--                <category android:name="android.intent.category.HOME" />-->
+<!--                <category android:name="android.intent.category.DEFAULT" />-->
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
+<!--        </activity>-->
+
+        <!-- Màn khóa: phủ full-screen khi mở app bị khóa -->
         <activity
-            android:name=".agent.ui.ChromeLauncherActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:excludeFromRecents="true">
+            android:name=".agent.ui.LockActivity"
+            android:exported="false"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.Material3.DayNight.NoActionBar.Fullscreen"/>
+
+        <receiver
+            android:name=".agent.service.BootReceiver"
+            android:exported="false">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.HOME" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.LAUNCHER" />
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
             </intent-filter>
-        </activity>
+        </receiver>
 
         <!-- Foreground Service nền -->
         <service
             android:name=".agent.service.KioskBackgroundService"
-            android:foregroundServiceType="connectedDevice"
+            android:foregroundServiceType="dataSync"
             android:exported="false" />
 
 
@@ -71,18 +90,18 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-<!--        <activity-->
-<!--            android:name=".MainActivity"-->
-<!--            android:theme="@style/Theme.KioskAgent"-->
-<!--            android:launchMode="singleTask"-->
-<!--            android:screenOrientation="portrait"-->
-<!--            android:exported="true">-->
+        <activity
+            android:name=".MainActivity"
+            android:theme="@style/Theme.KioskAgent"
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait"
+            android:exported="true">
 
-<!--            <intent-filter>-->
-<!--                <action android:name="android.intent.action.MAIN" />-->
-<!--                <category android:name="android.intent.category.LAUNCHER" />-->
-<!--            </intent-filter>-->
-<!--        </activity>-->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
 
     </application>
