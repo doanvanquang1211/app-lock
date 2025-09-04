@@ -1,21 +1,34 @@
 package com.example.kioskagent
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.usage.UsageStatsManager
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ShortcutInfo
+import android.content.pm.ShortcutManager
+import android.graphics.drawable.Icon
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.widget.*
 import androidx.activity.ComponentActivity
+import androidx.annotation.RequiresApi
+import androidx.core.app.NotificationCompat
 import com.example.kioskagent.agent.LockRepository
 import com.example.kioskagent.agent.service.KioskBackgroundService
 
 class MainActivity : ComponentActivity() {
     private lateinit var repo: LockRepository
-    private lateinit var listView: ListView
-    private lateinit var adapter: ArrayAdapter<String>
     private val launchablePkgs = mutableListOf<String>()
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         repo = LockRepository(this)
@@ -23,69 +36,61 @@ class MainActivity : ComponentActivity() {
 
         val etPwd = findViewById<EditText>(R.id.etPwd)
         val btnSave = findViewById<Button>(R.id.btnSavePwd)
-        val tvUsage = findViewById<TextView>(R.id.tvUsageStatus)
-        val tvOverlay = findViewById<TextView>(R.id.tvOverlayStatus)
-        val btnReqUsage = findViewById<Button>(R.id.btnReqUsage)
-        val btnReqOverlay = findViewById<Button>(R.id.btnReqOverlay)
-        val btnStart = findViewById<Button>(R.id.btnStartService)
-        val btnStop = findViewById<Button>(R.id.btnStopService)
-
-        listView = findViewById(R.id.listView)
-        adapter = ArrayAdapter(this, android.R.layout.simple_list_item_multiple_choice, launchablePkgs)
-        listView.adapter = adapter
-        listView.choiceMode = ListView.CHOICE_MODE_MULTIPLE
 
         // load app launchable
         loadLaunchableApps()
 
-        // Sync checked from repo
+        // lần đầu mở app → mặc định lock tất cả trừ Chrome
         val locked = repo.getLockedPackages()
-        for (i in launchablePkgs.indices) {
-            if (locked.contains(launchablePkgs[i])) listView.setItemChecked(i, true)
+        if (locked.isEmpty()) {
+            val defaultLocked = launchablePkgs
+                .filter { it != "com.android.chrome" } // ⚡ luôn bỏ Chrome ra
+                .toMutableSet()
+            repo.setLockedPackages(defaultLocked)
         }
-
         // Save password
         etPwd.setText(repo.getPassword() ?: "")
         btnSave.setOnClickListener {
-            repo.setPassword(etPwd.text.toString())
-            Toast.makeText(this, "Đã lưu mật khẩu", Toast.LENGTH_SHORT).show()
-        }
-
-        // Save locked list on click
-        listView.setOnItemClickListener { _, _, position, _ ->
-            val pkg = launchablePkgs[position]
-            val newSet = repo.getLockedPackages().toMutableSet().apply {
-                if (listView.isItemChecked(position)) add(pkg) else remove(pkg)
+            val pwd = etPwd.text.toString()
+            if (pwd.isBlank()) {
+                Toast.makeText(this, "Mật khẩu không được trống", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
-            repo.setLockedPackages(newSet)
-        }
 
-        // Permission status
-        fun refreshStatus() {
-            tvUsage.text = if (hasUsageAccess()) "Usage Access: OK" else "Usage Access: CHƯA CẤP"
-            tvOverlay.text = if (Settings.canDrawOverlays(this)) "Overlay: OK" else "Overlay: CHƯA CẤP"
-        }
-        refreshStatus()
+            repo.setPassword(pwd)
+            Toast.makeText(this, "Đã lưu mật khẩu", Toast.LENGTH_SHORT).show()
 
-        btnReqUsage.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            // Sau khi lưu → kiểm tra quyền ngay lần đầu
+            checkPermissions()
         }
+    }
 
-        btnReqOverlay.setOnClickListener {
-            val i = Intent(
-                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                Uri.parse("package:$packageName")
-            )
-            startActivity(i)
+    override fun onResume() {
+        super.onResume()
+        // mỗi lần quay lại màn hình → kiểm tra quyền tiếp
+        if (repo.getPassword() != null) {
+            checkPermissions()
         }
+    }
 
-        btnStart.setOnClickListener {
-            startForegroundService(Intent(this, KioskBackgroundService::class.java))
-            Toast.makeText(this, "Đã bật bảo vệ", Toast.LENGTH_SHORT).show()
-        }
-        btnStop.setOnClickListener {
-            stopService(Intent(this, KioskBackgroundService::class.java))
-            Toast.makeText(this, "Đã tắt bảo vệ", Toast.LENGTH_SHORT).show()
+    private fun checkPermissions() {
+        when {
+            !hasUsageAccess() -> {
+                Toast.makeText(this, "Vui lòng cấp quyền Usage Access", Toast.LENGTH_LONG).show()
+                startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+            }
+            !Settings.canDrawOverlays(this) -> {
+                Toast.makeText(this, "Vui lòng cấp quyền Overlay", Toast.LENGTH_LONG).show()
+                val i = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+                startActivity(i)
+            }
+            else -> {
+                Toast.makeText(this, "Đã có đủ quyền", Toast.LENGTH_SHORT).show()
+                startForegroundService(Intent(this, KioskBackgroundService::class.java))
+            }
         }
     }
 
@@ -111,6 +116,5 @@ class MainActivity : ComponentActivity() {
             .distinct()
             .sorted()
             .forEach { launchablePkgs.add(it) }
-        adapter.notifyDataSetChanged()
     }
 }

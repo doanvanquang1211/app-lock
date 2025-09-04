@@ -8,9 +8,12 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.*
+import android.net.wifi.WifiConfiguration
 import android.net.wifi.WifiManager
 import android.net.wifi.WifiNetworkSpecifier
+import android.net.wifi.WifiNetworkSuggestion
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -20,6 +23,7 @@ import android.os.UserManager
 import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.net.toUri
 import com.example.kioskagent.agent.AdminReceiver
 import com.example.kioskagent.agent.ForegroundAppDetector
@@ -27,8 +31,6 @@ import com.example.kioskagent.agent.ui.LockActivity
 
 class KioskBackgroundService : Service() {
 
-    private lateinit var dpm: DevicePolicyManager
-    private lateinit var adminComponent: ComponentName
     private val allowedSSID = "TC"
     private val allowedPassword = "Tcom123$567*"
 
@@ -41,10 +43,13 @@ class KioskBackgroundService : Service() {
 
     private val monitorRunnable = object : Runnable {
         override fun run() {
-//            checkWifi()
             val top = detector.getTopPackage()
+            Log.d("mmmmm", "pppppp $top")
+            val defaultLauncher = getDefaultLauncherPackage()
+
             if (top != null) {
-                if (top == "com.android.launcher") {
+                if (top == defaultLauncher || top == "com.android.chrome") {
+                    // Nếu là launcher hoặc Chrome → reset danh sách unlock
                     unlockedApps.clear()
                 } else {
                     if (!unlockedApps.contains(top) && top != packageName) {
@@ -56,37 +61,21 @@ class KioskBackgroundService : Service() {
         }
     }
 
+
+    private fun getDefaultLauncherPackage(): String? {
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+        }
+        val resolveInfo = packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+        return resolveInfo?.activityInfo?.packageName
+    }
+
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate() {
         super.onCreate()
-        dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-        adminComponent = ComponentName(this, AdminReceiver::class.java)
         detector = ForegroundAppDetector(this)
         startAsForeground()
-        Log.d("KioskService", "isDeviceOwner = ${dpm.isDeviceOwnerApp(packageName)}")
-
-        // Kiosk restrictions
-        if (dpm.isDeviceOwnerApp(packageName)) {
-            // Chặn cài/xóa app
-            dpm.addUserRestriction(adminComponent, UserManager.DISALLOW_INSTALL_APPS)
-            dpm.addUserRestriction(adminComponent, UserManager.DISALLOW_UNINSTALL_APPS)
-            dpm.clearUserRestriction(adminComponent, UserManager.DISALLOW_CONFIG_WIFI)
-            dpm.clearUserRestriction(adminComponent, UserManager.DISALLOW_CONFIG_BLUETOOTH)
-            // Chỉ cho phép Chrome chạy trong LockTask
-            dpm.setLockTaskPackages(adminComponent, arrayOf("com.android.chrome"))
-
-            dpm.setKeyguardDisabled(adminComponent, true)
-            dpm.setMaximumTimeToLock(adminComponent, 0)
-
-        }
-
-        // Kết nối WiFi
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-//            connectAllowedWifi()
-        }
-
-        // Mở Chrome ở kiosk mode
-//        openChrome()
 
         // Bắt đầu giám sát WiFi
         handler.post(monitorRunnable)
@@ -132,48 +121,53 @@ class KioskBackgroundService : Service() {
         return START_STICKY
     }
 
+
     override fun onDestroy() {
         super.onDestroy()
         handler.removeCallbacks(monitorRunnable)
     }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
 
-    @RequiresApi(Build.VERSION_CODES.Q)
-    private fun connectAllowedWifi() {
-        val specifier = WifiNetworkSpecifier.Builder()
-            .setSsid(allowedSSID)
-            .setWpa2Passphrase(allowedPassword)
-            .build()
-
-        val request = NetworkRequest.Builder()
-            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
-            .setNetworkSpecifier(specifier)
-            .build()
-
-        val connectivityManager =
-            getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        connectivityManager.requestNetwork(
-            request,
-            object : ConnectivityManager.NetworkCallback() {
-                override fun onAvailable(network: Network) {
-                    connectivityManager.bindProcessToNetwork(network)
-                }
-            })
-    }
-
     private fun checkWifi() {
-        val wifiManager =
-            applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-        val info = wifiManager.connectionInfo
-        val ssid = info.ssid?.replace("\"", "")
-        if (ssid != allowedSSID) {
-            Log.d("KioskService", "Sai WiFi: $ssid → reconnect...")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                connectAllowedWifi()
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val currentSSID = wifiManager.connectionInfo?.ssid?.replace("\"", "")
+        if (currentSSID != allowedSSID) {
+            Log.w("WifiEnforcer", "Sai WiFi: $currentSSID, chuyển về $allowedSSID")
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                // ✅ Android 9 trở xuống → dùng WifiConfiguration
+                val wifiConfig = WifiConfiguration().apply {
+                    SSID = "\"$allowedSSID\""
+                    preSharedKey = "\"$allowedPassword\""
+                    allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK)
+                }
+                val netId = wifiManager.addNetwork(wifiConfig)
+                if (netId != -1) {
+                    wifiManager.disconnect()
+                    wifiManager.enableNetwork(netId, true)
+                    wifiManager.reconnect()
+                } else {
+                    Log.e("WifiEnforcer", "Không add được cấu hình WiFi $allowedSSID")
+                }
+            } else {
+                // ✅ Android 10 trở lên → dùng WifiNetworkSuggestion
+                val suggestion = WifiNetworkSuggestion.Builder()
+                    .setSsid(allowedSSID)
+                    .setWpa2Passphrase(allowedPassword)
+                    .setIsAppInteractionRequired(false) // auto connect, không cần user bấm
+                    .build()
+
+                val suggestionsList = listOf(suggestion)
+                val status = wifiManager.addNetworkSuggestions(suggestionsList)
+                if (status != WifiManager.STATUS_NETWORK_SUGGESTIONS_SUCCESS) {
+                    Log.e("WifiEnforcer", "Thêm WiFi suggestion thất bại: $status")
+                } else {
+                    Log.d("WifiEnforcer", "Đã add suggestion WiFi $allowedSSID")
+                }
             }
         }
+
     }
 
 

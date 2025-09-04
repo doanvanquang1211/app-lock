@@ -7,7 +7,6 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 
 class BootReceiver : BroadcastReceiver() {
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onReceive(context: Context, intent: Intent) {
         if (Intent.ACTION_BOOT_COMPLETED == intent.action) {
             context.startForegroundService(Intent(context, KioskBackgroundService::class.java))

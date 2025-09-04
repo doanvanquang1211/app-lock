@@ -28,56 +28,6 @@
 
         <View android:layout_width="match_parent" android:layout_height="8dp"/>
 
-        <TextView
-            android:id="@+id/tvUsageStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Usage Access: ?"/>
-
-        <Button
-            android:id="@+id/btnReqUsage"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Cấp Usage Access"/>
-
-        <TextView
-            android:id="@+id/tvOverlayStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Overlay: ?"/>
-
-        <Button
-            android:id="@+id/btnReqOverlay"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Cấp quyền Overlay"/>
-
-        <View android:layout_width="match_parent" android:layout_height="8dp"/>
-
-        <Button
-            android:id="@+id/btnStartService"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Bật bảo vệ"/>
-
-        <Button
-            android:id="@+id/btnStopService"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Tắt bảo vệ"/>
-
         <View android:layout_width="match_parent" android:layout_height="12dp"/>
-
-        <TextView
-            android:text="Chọn ứng dụng cần khóa"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-
-        <ListView
-            android:id="@+id/listView"
-            android:layout_width="match_parent"
-            android:layout_height="400dp"
-            android:choiceMode="multipleChoice"/>
-
     </LinearLayout>
 </ScrollView>

@@ -17,6 +17,16 @@ class LockRepository(context: Context) {
 
     fun setLockedPackages(set: Set<String>) = prefs.edit { putStringSet("locked_pkgs", set) }
 
+    // Kiểm tra lần đầu chạy
+    fun isFirstRun(): Boolean {
+        return prefs.getBoolean("first_run", true)
+    }
+
+    // Đánh dấu đã chạy lần đầu
+    fun setFirstRunDone() {
+        prefs.edit().putBoolean("first_run", false).apply()
+    }
+
     fun addLockedPackage(pkg: String) {
         val cur = getLockedPackages().toMutableSet()
         cur.add(pkg)

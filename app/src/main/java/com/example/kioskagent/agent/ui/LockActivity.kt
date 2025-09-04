@@ -20,12 +20,9 @@ class LockActivity : ComponentActivity() {
 
         targetPkg = intent.getStringExtra("target_pkg")
 
-        val tvTitle = findViewById<TextView>(R.id.tvTitle)
         val et = findViewById<EditText>(R.id.etPassword)
         val btn = findViewById<Button>(R.id.btnUnlock)
         val tvErr = findViewById<TextView>(R.id.tvError)
-
-        tvTitle.text = "Đã khóa: ${targetPkg ?: ""}"
 
         btn.setOnClickListener {
             val pwd = repo.getPassword()
