@@ -1,26 +1,15 @@
 package com.example.kioskagent
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
+
 import android.app.usage.UsageStatsManager
-import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.content.pm.ShortcutInfo
-import android.content.pm.ShortcutManager
-import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
 import android.widget.*
 import androidx.activity.ComponentActivity
 import androidx.annotation.RequiresApi
-import androidx.core.app.NotificationCompat
 import com.example.kioskagent.agent.LockRepository
 import com.example.kioskagent.agent.service.KioskBackgroundService
 
